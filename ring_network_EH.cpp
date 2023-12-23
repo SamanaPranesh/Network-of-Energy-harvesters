@@ -3,6 +3,7 @@
 // Contact information : psamana97@gmail.com
 
 // C++ code with OpenMP parallelization to simulate a ring network of electromagnetic pendulum energy harvesters.
+// The code also includes the algorithm to remove p% of links from the adjacency matrix. 
 // Algorithm used : 4th Order Runge-Kutta time marching algorithm
 
 /*
@@ -13,14 +14,16 @@
    N --> Number of energy harvesters in the network
    m --> degree of each node in the network
 
-   For compiling: g++ test.cpp -o test -lm -lgsl -lgslcblas -Ofast -fopenmp
+   For compiling: g++ ring_network_EH.cpp -o test -lm -lgsl -lgslcblas -Ofast -fopenmp
 
 */
-
 
 #include<math.h>
 #include<ctime>
 #include<stdio.h>
+#include <iostream>
+#include <vector>
+#include <cstdlib>
 #include<gsl/gsl_rng.h>
 #include<gsl/gsl_randist.h>
 #include "network_lib.cpp"
@@ -109,6 +112,36 @@ void init(double x[], double y[], int N, gsl_rng* h)
     }
 }
 
+// Function to count the total number of connections in the adjacency matrix
+int countConnections(int** adj, int N) {
+    int totalConnections = 0;
+    for (size_t i = 0; i < N; ++i) {
+        for (size_t j = i + 1; j < N; ++j) {
+            totalConnections += adj[i][j];
+        }
+    }
+    return totalConnections;
+}
+
+// Function to randomly remove connections from the adjacency matrix
+void randomlyRemoveConnections(int** adj, int N, double Pinact) {
+    int totalConnections = countConnections(adj, N);
+    int connectionsToRemove = static_cast<int>(Pinact * totalConnections);
+
+    srand(static_cast<unsigned int>(time(nullptr)));
+
+    while (connectionsToRemove > 0) {
+        int i = rand() % N;
+        int j = rand() % N;
+
+        if (i != j && adj[i][j] == 1 && adj[j][i] == 1) {
+            adj[i][j] = 0;
+            adj[j][i] = 0;
+            connectionsToRemove--;
+        }
+    }
+}
+
 
 int main()
 {
@@ -118,6 +151,7 @@ int main()
 
     int N=100;
     int m = 2;
+    double Pinact = 0.1;
     double dt = 0.01, t=0, omega;
 
     // Initialize adjacency matrix
@@ -142,6 +176,8 @@ int main()
         adj[i][right_neighbor] = 1;
         adj[right_neighbor][i] = 1; // Connection in the opposite direction
         }
+
+    randomlyRemoveConnections(adj,N,Pinact);
 
     char name1[50]; 
 
