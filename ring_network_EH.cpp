@@ -13,6 +13,7 @@
    beta --> coupling strength
    N --> Number of energy harvesters in the network
    m --> degree of each node in the network
+   pinact --> percentage of links to be removed from the adjacency matrix
 
    For compiling: g++ ring_network_EH.cpp -o test -lm -lgsl -lgslcblas -Ofast -fopenmp
 
