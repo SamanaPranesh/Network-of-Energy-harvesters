@@ -13,7 +13,6 @@
    beta --> coupling strength
    N --> Number of energy harvesters in the network
    m --> degree of each node in the network
-   pinact --> percentage of links to be removed from the adjacency matrix
 
    For compiling: g++ ring_network_EH.cpp -o test -lm -lgsl -lgslcblas -Ofast -fopenmp
 
@@ -29,6 +28,7 @@
 #include<gsl/gsl_randist.h>
 #include "network_lib.cpp"
 #include<omp.h>
+#include <utility>
 
 // Parameters are defined
 #define freq 0.05
@@ -124,23 +124,46 @@ int countConnections(int** adj, int N) {
     return totalConnections;
 }
 
-// Function to randomly remove connections from the adjacency matrix
-void randomlyRemoveConnections(int** adj, int N, double Pinact) {
+// Function to randomly remove faulty connections from the adjacency matrix
+void removeFaultyConnections(int** adj, int N, double p) {
     int totalConnections = countConnections(adj, N);
-    int connectionsToRemove = static_cast<int>(Pinact * totalConnections);
+    int faultyConnections = static_cast<int>(p * 0.5 * totalConnections);
+
+    // Create an array of pairs to store indices of non-zero elements above the main diagonal
+    std::pair<int, int>* S = new std::pair<int, int>[totalConnections];
+    int q = 0;
+
+    // Store indices of non-zero elements above the main diagonal
+    for (int i = 0; i < N; ++i) {
+        for (int j = i + 1; j < N; ++j) {
+            if (adj[i][j] == 1) {
+                S[q++] = std::make_pair(i, j);
+            }
+        }
+    }
 
     srand(static_cast<unsigned int>(time(nullptr)));
 
-    while (connectionsToRemove > 0) {
-        int i = rand() % N;
-        int j = rand() % N;
+    while (faultyConnections > 0 && q > 0) {
+        int z = rand() % q; // Generate a random index within the range of S
 
-        if (i != j && adj[i][j] == 1 && adj[j][i] == 1) {
-            adj[i][j] = 0;
-            adj[j][i] = 0;
-            connectionsToRemove--;
+        int i = S[z].first;
+        int j = S[z].second;
+
+        // Update adjacency matrix and ensure symmetry
+        adj[i][j] = 0;
+        adj[j][i] = 0;
+
+        // Remove the used index from S by shifting remaining elements
+        for (int k = z; k < q - 1; ++k) {
+            S[k] = S[k + 1];
         }
+        q--;
+
+        faultyConnections--;
     }
+
+    delete[] S; // Deallocate memory for the array
 }
 
 
@@ -178,7 +201,7 @@ int main()
         adj[right_neighbor][i] = 1; // Connection in the opposite direction
         }
 
-    randomlyRemoveConnections(adj,N,Pinact);
+    removeFaultyConnections(adj,N,Pinact);
 
     char name1[50]; 
 
